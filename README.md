@@ -1,1 +1,1 @@
-# Econometria
+# Gráficos
