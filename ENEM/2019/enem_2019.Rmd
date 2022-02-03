@@ -35,18 +35,21 @@ ENEM_2019_clean <- ENEM_2019 %>%
     TP_PRESENCA_LC == 1,           # Presente em LC
     TP_PRESENCA_MT == 1,           # Presente em MT
     TP_STATUS_REDACAO != 2,        # Não teve a redação anulada
+    IN_TREINEIRO ==0,              # Removendo treineiros
     is.na(CO_ESCOLA) == F          # Somente escolas com código no Censo Escolar
     ) %>%    
-  select(-c(7:10,     # Referente à cor da prova
-            29:79,    # Referente à condições especiais (exceto treineiro)
-            84:91,    # Referente à cor e participação
+  select(-c(3:6,     # Residência (participante)
+            9,11:16, # Estado civil e nascimento (participante)
+            20, 29:79, # Condições especiais + treineiro
+            80:91,    # Local da prova, cor e participação
             96:104,   # Gabarito e respostas
             105:110,  # Referente à redação
             112:136)  # Referente ao questionário socioeconômico
          )
 
-str(ENEM_2019_clean)
+list(names(ENEM_2019_clean))
 
 write.csv(ENEM_2019_clean, file = "enem_2019_censo_escolar.csv")
 ```
+
 
