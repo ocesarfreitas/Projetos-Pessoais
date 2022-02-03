@@ -1,0 +1,52 @@
+---
+title: "ENEM 2019"
+author: "Grupo - Educação"
+date: "03/02/2022"
+output: pdf_document
+---
+
+```{r bibliotecas, include=FALSE}
+library(tidyverse)
+library(data.table)
+```
+
+```{r importação de dados}
+# Alocação de memória no R
+memory.limit(memory.limit()*2)
+
+# Importando a base
+ENEM_2019 <- data.table::fread(input='MICRODADOS_ENEM_2019.csv',
+                               integer64='character',
+                               skip=0,  #Ler do inicio
+                               nrow=-1, #Ler todos os registros
+                               na.strings = "", 
+                               showProgress = TRUE)
+
+# Observar nome das variáveis
+list(names(ENEM_2019))
+```
+
+```{r tratamento de dados}
+ENEM_2019_clean <- ENEM_2019 %>%
+  filter(
+    duplicated(NU_INSCRICAO) == F, # Eliminando duplicatas
+    TP_PRESENCA_CN == 1,           # Presente em CN 
+    TP_PRESENCA_CH == 1,           # Presente em CH
+    TP_PRESENCA_LC == 1,           # Presente em LC
+    TP_PRESENCA_MT == 1,           # Presente em MT
+    TP_STATUS_REDACAO != 2,        # Não teve a redação anulada
+    is.na(CO_ESCOLA) == F          # Somente escolas com código no Censo Escolar
+    ) %>%    
+  select(-c(7:10,     # Referente à cor da prova
+            29:79,    # Referente à condições especiais (exceto treineiro)
+            84:91,    # Referente à cor e participação
+            96:104,   # Gabarito e respostas
+            105:110,  # Referente à redação
+            112:136)  # Referente ao questionário socioeconômico
+         )
+
+str(ENEM_2019_clean)
+
+write.csv(ENEM_2019_clean, file = "enem_2019_censo_escolar.csv")
+```
+
