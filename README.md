@@ -1,1 +1,1 @@
-# Gráficos
+# Laboratório Econometria
