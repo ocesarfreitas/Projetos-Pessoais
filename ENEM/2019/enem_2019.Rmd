@@ -8,6 +8,7 @@ output: pdf_document
 ```{r bibliotecas, include=FALSE}
 library(tidyverse)
 library(data.table)
+library(curl)
 ```
 
 ```{r importação de dados}
@@ -35,6 +36,7 @@ ENEM_2019_clean <- ENEM_2019 %>%
     TP_PRESENCA_LC == 1,           # Presente em LC
     TP_PRESENCA_MT == 1,           # Presente em MT
     TP_STATUS_REDACAO != 2,        # Não teve a redação anulada
+    TP_ST_CONCLUSAO == 2,          # Esta cursando e irá terminar o EM em 2019
     IN_TREINEIRO ==0,              # Removendo treineiros
     is.na(CO_ESCOLA) == F          # Somente escolas com código no Censo Escolar
     ) %>%    
@@ -52,4 +54,33 @@ list(names(ENEM_2019_clean))
 write.csv(ENEM_2019_clean, file = "enem_2019_censo_escolar.csv")
 ```
 
+```{r média por escola censo escolar}
+# Importando base de dados do github
+## Amigos recomendo vocês importarem direto essa go git hub porque é bem mais leve
+df.enem_2019 <- read.csv(curl::curl("https://github.com/ocesarfreitas/Laboratorio-Econometria/blob/main/ENEM/2019/enem_2019_censo_escolar.csv?raw=true"))
+
+# Observando a estrutura
+str(df.enem_2019)
+
+# Calculando a média por escola
+df.enem.clean_2019 <- df.enem_2019 %>%
+  select(CO_ESCOLA, NU_NOTA_CN, NU_NOTA_CH, NU_NOTA_LC, NU_NOTA_MT,
+         NU_NOTA_REDACAO) %>%
+  group_by(CO_ESCOLA) %>%
+  mutate_at(2:6, as.numeric) %>%
+  summarise_at(vars(NU_NOTA_CN, NU_NOTA_CH, NU_NOTA_LC, NU_NOTA_MT,
+                    NU_NOTA_REDACAO), list(mean = mean))
+
+# Selecionando as escolas com pelo menos 10 participantes
+## Obs. Deve ter um jeito mais fácil de fazer isso mas tava com preguiça
+df.enem.ma10.2019 <- df.enem_2019 %>%
+  group_by(CO_ESCOLA) %>%
+  summarise(n=n()) %>%
+  filter(n >= 10) %>%
+  select(-n)
+
+# Captando as escolas que atendem os requsitos 
+df.enem.2019.final <- right_join(df.enem.clean_2019, df.enem.ma10.2019,
+                                by = "CO_ESCOLA")
+```
 
