@@ -11,4 +11,6 @@ econometria. Sendo os principais conteúdo abordados:
 7. Diferenças em Diferenças
 
 ## Objetivos pessoais
-- 
+- Realizar as listas em sala tanto em R quanto em Python
+- Desenvolver minhas habilidades com o R Markdowm e outros softwares de edição
+- Aplicar os métodos e modelos econométricos em sala em produções acadêmicas futuras
