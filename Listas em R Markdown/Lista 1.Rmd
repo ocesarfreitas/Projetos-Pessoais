@@ -1,0 +1,149 @@
+---
+title: "Lista 1 - Laboratório"
+author: "César Freitas Albuquerque"
+date: "16/02/2022"
+output: pdf_document
+---
+
+
+```{r bibliotecas, include=FALSE}
+# Instalando bibliotecas
+library(tidyverse)
+library(data.table)
+library(psych)
+library(Hmisc)
+library(Weighted.Desc.Stat)
+library(weights)
+library(readr)
+```
+
+```{r Diretório}
+# Diretório
+workingdirectory <- "C:/Users/CLIENTE/OneDrive/Área de Trabalho/Economia/6º Semestre/Laboratório/Lab"
+
+setwd(workingdirectory)
+```
+
+
+```{r Tratamento de dados - Pessoas}
+## Caminho da PNAD 2001
+pnad2001namepath <- paste(workingdirectory, "/PES2001.TXT", sep="")
+
+## Caminho dicionário 2001
+dicionario_pes <- paste(workingdirectory, "/Dicionario de variáveis de pessoas - 2001.xls", sep = "")
+
+## Criar um vetor para ler todas as variáveis 
+df.dicionario <- readxl::read_xls(dicionario_pes)
+
+df.dicionario1 <- df.dicionario %>%
+  select(c(1:2)) %>% drop_na(...2) %>% slice(-1) %>%
+  mutate_all(as.integer)
+
+# Limpando nomes
+names(df.dicionario1)[1] <- "posicao_inicial"
+names(df.dicionario1)[2] <- "tamanho"
+
+# Criando vetores de distancia 
+beg <- c(df.dicionario1$posicao_inicial)
+end <- c(df.dicionario1$posicao_inicial+df.dicionario1$tamanho-1)
+
+# Lista com as distancias das variaveis
+df.pnad2001.colunas.limites <-list(beg = beg, end = end)
+
+## Importando a base de dados
+df.pnad2001 <- fread(pnad2001namepath, header = FALSE, sep = "", na.strings = c("NA","N/A","", " "), skip = 0L, stringsAsFactors = FALSE,
+)[, lapply(1:(length(df.pnad2001.colunas.limites$beg)), 
+           function(ii){as.numeric(substr(V1, df.pnad2001.colunas.limites$beg[ii], df.pnad2001.colunas.limites$end[ii]))}
+)]
+
+## Renomenando as variáveis
+df.dicionario2 <- df.dicionario %>%
+  select(3) %>% drop_na() %>% slice(-1)
+
+# Renomeando coluna
+names(df.dicionario2)[1] <- "COD"
+
+# Criando vetor com nome das variáveis
+df.pnad2001.colunas.nomes <- c(df.dicionario2$COD)
+
+# Mudando os nomes de todas as colunas
+colnames(df.pnad2001) <- df.pnad2001.colunas.nomes
+
+# Observando a estrutura para conferir a base
+str(df.pnad2001)
+
+## Descrição da base 
+cat("(observacoes, variaveis) = (", paste(dim(df.pnad2001), collapse=", "), ")")
+ls(df.pnad2001)
+sapply(df.pnad2001,class)
+
+## Alterando posição das variáveis (V0102 e V0103)
+df.pnad2001 <- df.pnad2001[order(df.pnad2001$V0102, df.pnad2001$V0103),]
+```
+
+```{r Tratamento de dados - Domicílio}
+## Nome do arquivo
+nomeArquivoPnadDom <- paste(workingdirectory, "/DOM2001.TXT", sep="")
+
+## Dicionário dom
+dicionario_dom <- paste(workingdirectory, "/Dicionario de variáveis de domicílios - 2001.xls", sep = "")
+
+## Criar um vetor para ler todas as variáveis 
+df.dicionario.dom <- readxl::read_xls(dicionario_dom)
+
+df.dicionario1 <- df.dicionario.dom %>%
+  select(c(1:2)) %>% drop_na(...2) %>% slice(-1) %>%
+  mutate_all(as.integer)
+
+# Limpando nomes
+names(df.dicionario1)[1] <- "posicao_inicial"
+names(df.dicionario1)[2] <- "tamanho"
+
+## Criando vetores de distancia 
+beg <- c(df.dicionario1$posicao_inicial)
+end <- c(df.dicionario1$posicao_inicial+df.dicionario1$tamanho-1)
+
+## Lista com as distancias das variaveis
+df.pnad2001dom.colunas.limites <-list(beg = beg, end = end)
+
+## Importando base
+df.pnad2001dom = fread(nomeArquivoPnadDom, header = FALSE, sep = "",
+                       na.strings = c("NA","N/A","", " "),
+                       skip = 0L, stringsAsFactors = FALSE,
+)[, lapply(1:(length(df.pnad2001dom.colunas.limites$beg)),
+           function(ii) as.numeric(substr(V1, df.pnad2001dom.colunas.limites$beg[ii], df.pnad2001dom.colunas.limites$end[ii]))
+)
+]
+
+## Renomeando as variáveis
+df.dicionario2 <- df.dicionario.dom %>%
+  select(3) %>% drop_na() %>% slice(-1)
+
+# Renomeando coluna
+names(df.dicionario2)[1] <- "COD"
+
+# Criando vetor com nome das variáveis
+df.pnad2001dom.colunas.nomes <- c(df.dicionario2$COD)
+
+# Mudando os nomes de todas as colunas
+colnames(df.pnad2001dom) <- df.pnad2001dom.colunas.nomes
+names(df.pnad2001dom)[1] <- "V0101"
+
+# Observando a estrutura para conferir a base
+str(df.pnad2001)
+
+# Sorting the key (V0102 and V0103)
+df.pnad2001dom <- df.pnad2001dom[order(df.pnad2001dom$V0102, df.pnad2001dom$V0103),]
+
+
+#######MERGING PNAD Pessoas and PNAD Domic?lios######    
+df.MergePessDom <- merge(x = df.pnad2001, y = df.pnad2001dom, by = c("V0102", "V0103"))
+
+cat("observacoes = ", format(nrow(df.MergePessDom)), "")
+
+# salvando o Banco mesclado
+write.csv(df.MergePessDom, file=paste0(workingdirectory, "/base_inicialpessdom.R.csv"))
+
+save(df.MergePessDom, file=paste0(workingdirectory, "/base_inicialpessdom.R.dta"))
+```
+

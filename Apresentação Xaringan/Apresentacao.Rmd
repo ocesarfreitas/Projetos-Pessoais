@@ -1,0 +1,920 @@
+---
+title: "Apresentação laboratório de Econometria"
+author: "Cesar Freitas, Gabriel Lucas, João Pedro Dias, Júlia Michalski, Vinícius Nery"
+institute: "Universidade de Brasília (UnB)"
+date: "`r format(Sys.Date(), '%d/%m/%Y')`"
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    includes:
+      after_body: insert-logo.html
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r setup, results='hide', echo=FALSE, warning=FALSE, message=FALSE}
+# Dados
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(psych)
+library(purrr)
+library(magrittr)
+library(broom)
+
+# Gráficos e Tabelas
+library(ggplot2)
+library(stargazer)
+library(kableExtra)
+library(cowplot)
+library(ggstatsplot)
+library(viridis)
+
+# Mapas
+library(raster) # 
+library(rgdal) # Mapas/polígonos
+library(maptools) # Auxilia nas ferramentas gráficas do ggplot
+library(gpclib) # Ativar o rolê
+
+# Modelos
+library(plm)
+
+# Testes e erros-padrões
+library(robustbase)
+library(lmtest)
+library(sandwich)
+
+# APIs
+library(googledrive)
+
+# Mais informações: JuntaBasesEducacao.R
+# Diretório
+sDiretorio_Base <- getwd()
+setwd(sDiretorio_Base)
+
+# Definindo pasta de dados 
+
+sPasta_Dados <- paste(sDiretorio_Base, "/Dados", sep = "")
+
+# Nome do arquivo
+sArquivo_Dados <- "Dados_Educacao_Final.csv"
+```
+
+```{r Setup_Figuras, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(fig.align = 'center', echo = TRUE)
+# knitr::opts_chunk$set(fig.width = 4.5, fig.height = 3) 
+
+# Nome do arquivo
+sArquivo_Dados <- "Dados_Educacao_Final.csv"
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+style_mono_accent(base_color = "#1c5253")
+```
+
+class: inverse, middle, center, hide-logo
+
+# Contexto
+
+---
+
+# Contexto
+<!--
+Estou um pouco na dúvida se essa parte é realmente relevante para apresentação
+-->
+
+.right-column[
+```{r, fig.cap="Escolaridade Média de Diversos Países entre 1900 e 2010", echo=F, message=F, warning=F, fig.height=5, fig.width=8, cache = TRUE}
+# Lendo os dados de anos de educação
+dfAnosEducacao <- readxl::read_xlsx("Dados/AverageYearsofEducation_Compact.xlsx",
+                                    sheet = "Data Long Format")
+
+# Dados do Brasil
+dfAnosEducacaoBR <- dfAnosEducacao %>% 
+  filter(country.name == "Brazil", year >= 1900)
+
+# Gráfico com linhas cinzas e Brasil destacado
+dfAnosEducacao %>% 
+  filter(year >= 1900) %>% 
+  ggplot(aes(x = year, y = value, group = country.name)) +
+  geom_line(lwd = .5, colour = "lightgray") +
+  # Brasil
+  geom_point(data = dfAnosEducacaoBR, size = 2.5, colour = "darkcyan") + 
+  geom_line(data = dfAnosEducacaoBR, lwd = 1.25, colour = "darkcyan") +
+  scale_x_continuous(breaks = seq(1900, 2010, by = 10)) +
+  scale_y_continuous(breaks = seq(0, 14, by = 2),
+                     labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = F)) +
+  labs(x = "Ano", y = "Anos de Educação") + 
+  theme(legend.position = 'none',
+        axis.title = element_text(size=20)) + 
+  theme_classic()
+```
+]
+
+--
+
+.left-column[
+`r emo::ji("right_arrow")` Até 1970: acesso educação básica no Brasil era um privilégio
+
+`r emo::ji("right_arrow")` A partir de 1970: ganho de produtividade e redução da desigualdade de renda
+
+`r emo::ji("right_arrow")` Século XXI: desafio de aliar esse ganho a melhoras quali na educação
+]
+
+
+---
+
+class: inverse, middle, center, hide-logo
+
+# O IDEB
+
+---
+# O Ideb
+
+`r emo::ji("right_arrow")` Criado em 2007 para estimar a situação educacional, realizado bianualmente
+
+`r emo::ji("right_arrow")` Parte das metas do Plano de Desenvolvimento
+
+--
+
+.pull-left[
+### Construção do indicador
+\begin{equation}
+  IDEB_{ij} = R_{ij} \cdot A_{ij}
+\end{equation}
+
+`r emo::ji("right_arrow")` $i$ = ano do exame (Saeb e Prova Brasil) e do Censo Escolar
+
+`r emo::ji("right_arrow")` $j$ = unidade de ensino
+
+`r emo::ji("right_arrow")` $R_{ij}$ = Indicador de rendimento
+  
+`r emo::ji("right_arrow")` $A_{ij}$ = Média do desempenho de matemática e português
+
+]
+
+--
+
+.pull-right[
+### Questões sobre o ideb
+`r emo::ji("right_arrow")` Combina 'fluxo' e 'aprendizagem' para equilibrar a avaliação do indicador
+
+`r emo::ji("right_arrow")` Passível de ser burlado pelas instituições de ensino
+
+`r emo::ji("right_arrow")` A prova desconsidera questões qualitativas, socioeconômicas e conjunturais que podem vir a afetar o desempenho dos estudantes
+]
+
+---
+
+class: inverse, middle, center, hide-logo
+
+# Dados
+
+---
+# Bases de dados
+`r emo::ji("right_arrow")` Todas as base foram extraídas do *datalake* da Base dos Dados, usando o *Google Big Query*
+
+--
+
+.pull-left[
+### IDEB
+`r emo::ji("right_arrow")` Disponibilizados pelo Inep, com recorte a nível escolar e municipal
+
+`r emo::ji("right_arrow")` Excluiu-se as que escolas municipais brasileiras sem Ideb registrado
+
+`r emo::ji("right_arrow")` Foco no Ensino Fundamental
+]
+
+--
+
+.pull-right[
+### Censo Escolar
+`r emo::ji("right_arrow")` Disponibilizados pelo Inep
+
+`r emo::ji("right_arrow")` Utilizou-se as variáveis referentes a infraestrutura, tecnologia, número de matrículas e quantidade professores, obtidas a nível de colégio
+
+]
+---
+# Bases de dados
+
+.pull-left[
+### Indicadores Educacionais
+`r emo::ji("right_arrow")` Disponibilizados pelo Inep, para cada uma das etapas de ensino (Fundamental I e II) em cada escola
+
+`r emo::ji("right_arrow")` Média de alunos por turma, a quantidade de horas-aula 
+
+`r emo::ji("right_arrow")` Percentual de professores com ensino superior
+]
+
+--
+
+.pull-right[
+### SICONFI
+`r emo::ji("right_arrow")` Sistema de Informações Contábeis e Fiscais do Setor Público Brasileiro
+
+`r emo::ji("right_arrow")` *Proxy* para o valor gasto por cada escola
+usada pelo Tesouro Nacional, dada pela expressão:
+\begin{equation}
+  desp^{esc}_{educ} = \frac{alunos^{esc}}{alunos^{mun}}\cdot desp^{mun}_{educ}
+\end{equation}
+]
+---
+# Bases de dados
+.pull-left[
+### IBGE
+`r emo::ji("right_arrow")` Obter dados sobre PIB e população municipal
+
+### RAIS
+`r emo::ji("right_arrow")` Obter o número de trabalhadores formais e o salário médio de cada município
+
+`r emo::ji("right_arrow")` Coletou-se também esses dados discriminados
+para os professores para as etapa educionais utilizadas
+]
+
+--
+
+.pull-right[
+### Fundeb
+
+`r emo::ji("right_arrow")` O Fundeb por município, faz parte das informações sobre transferências obrigatórias da união para municípios divulgadas pelo Tesouro Nacional
+
+`r emo::ji("right_arrow")` Não foi retirado da *Base dos Dados*
+
+]
+
+---
+# Bases de dados
+### Considerações
+`r emo::ji("right_arrow")` Observou-se a presença de valores extremos em relação as despesas municipais
+
+`r emo::ji("right_arrow")` Foi considerado como *outliers* as observações que se encontravam no topo 0,1% da distribuição, de modo que:
+
+--
+
+<table style="text-align:center"><caption><strong>Resultado da base</strong></caption>
+ <tr><td colspan="4" style="border-bottom: 1px solid black"></td></tr>
+  <tr>
+   <th style="text-align:left;"> Situação </th>
+   <th style="text-align:center;"> Observações </th>
+   <th style="text-align:center;"> Variáveis </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> Sem tratar outliers </td>
+   <td style="text-align:center;"> 271.621 </td>
+   <td style="text-align:center;"> 96 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Após tratar outliers </td>
+   <td style="text-align:center;"> 270.348 </td>
+   <td style="text-align:center;"> 96 </td>
+  </tr>
+<tr><td colspan="4" style="border-bottom: 1px solid black"></td></tr></table>
+---
+
+class: inverse, middle, center, hide-logo
+
+# Análises Preliminares
+
+--
+## Conjuntura
+
+---
+# Análises Preliminares
+### 
+```{r Leitura da Base, results='hide', echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE}
+# Lendo a base
+df.educ <- data.table::fread(paste(sPasta_Dados, sArquivo_Dados, sep = "/"))
+```
+
+```{r Distribuição das Observações, results='asis', echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE}
+df.educ %>% 
+  group_by(ano, anos_escolares) %>% 
+  summarise(n = n()) %>% 
+  pivot_wider(names_from = anos_escolares, values_from = n, values_fill = 0) %>% 
+  relocate(`iniciais (1-5)`, .after = ano) %>% 
+  rename(Ano = ano, `Fundamental I` = `iniciais (1-5)`, 
+         `Fundamental II` = `finais (6-9)`) %>% 
+  mutate(Total = `Fundamental I` + `Fundamental II`) %>% 
+  adorn_totals("row") %>% 
+  stargazer(
+    title = "Distribuição das Observações por Ano e Etapa Escolar",
+    summary = F, 
+    rownames = F,
+    header = F,
+    digit.separator = ".",
+    label = "tab:dist_anos_etapa",
+    type = "html"
+  )
+```
+
+---
+
+# Análises Preliminares
+```{r Importar mapa, message=FALSE, warning=FALSE, include=FALSE, cache = TRUE}
+## Ativar permição para o funcionamento do maptools e broom em mapas
+if (!require(gpclib)) install.packages("gpclib", type="source")
+gpclibPermit()
+
+## Diretório
+diretorio <- getwd()
+setwd(diretorio)
+
+
+## Puxando dados do site do IBGE
+td <- tempdir()
+tf <- tempfile()
+
+url <- "http://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2020/Brasil/BR/BR_UF_2020.zip"
+download.file(url , destfile = tf)
+
+## Observar os arquivos dentro da pasta zipada
+unzip(tf, list=TRUE)
+
+## Separando cada arquivo na pasta zip
+# Para esse grupo de arquivo em específico é necessário que puxe todos os arquivos
+# para que a função shapefile() funcione, mas na maioria dos casos isso não é
+# necessariamente verdade
+
+## Unzipando os arquivos do diretório temporário 
+unzip(tf, files=unzip(tf, list=TRUE)$Name[1], exdir=td, overwrite=TRUE)
+unzip(tf, files=unzip(tf, list=TRUE)$Name[2], exdir=td, overwrite=TRUE)
+unzip(tf, files=unzip(tf, list=TRUE)$Name[3], exdir=td, overwrite=TRUE)
+unzip(tf, files=unzip(tf, list=TRUE)$Name[4], exdir=td, overwrite=TRUE)
+unzip(tf, files=unzip(tf, list=TRUE)$Name[5], exdir=td, overwrite=TRUE)
+
+## Importando os dados
+MAPA <- shapefile(paste0(td,"\\",unzip(tf, list=TRUE)$Name[4]))
+
+## Unlinkando os arquivos temporários do R e removendo coisas inuteis
+unlink(tf)
+unlink(td)
+rm(list = c("td", "tf", "url", "fpath"))
+
+## Plotando mapa simples para ver se ta tudo certo
+plot(MAPA)
+
+## Mudando formato do arquivo para tidy, para poder usar o ggplot 
+mapa_tidy <- tidy(MAPA, region = "SIGLA_UF")
+```
+
+### Resultado do Ideb por UF
+
+```{r ideb - base, message=FALSE, warning=FALSE, include=FALSE, cache = TRUE}
+df.educ.ideb <- df.educ %>%
+  group_by(uf, ano) %>%
+  summarise(mean(ideb, na.rm = T))
+
+names(df.educ.ideb)[3] <- paste("ideb")
+```
+
+.right-column[
+```{r Mapa ideb,echo=F, message=F, warning=F, fig.height=5, fig.width=8, cache = TRUE}
+## Unindo as informações de interesse com a base dos gráficos
+mapa_tidy %>%
+  right_join(. , df.educ.ideb, by=c("id"="uf")) %>%
+  filter(ano != 2009) %>%
+  ggplot() +
+    geom_polygon(aes(fill = ideb, x = long, y = lat, group = group), 
+                 size=0, alpha=0.9) +
+    geom_polygon(aes(x = long, y = lat, group = group), 
+                 color="black", fill = NA) +
+    scale_fill_viridis(trans = "log", name="IDEB",
+                       guide = guide_legend(keyheight = unit(3, units = "mm"),
+                                            keywidth=unit(12, units = "mm"),
+                                            label.position = "bottom",
+                                            title.position = 'top', nrow=1)) + 
+    theme_void() +
+    labs(caption = "Fonte: IBGE, IDEB") +
+    theme(legend.position = c(0.85, 0.09)) +
+    coord_map() +
+    facet_wrap(vars(ano))
+```
+]
+
+--
+
+.left-column[
+`r emo::ji("right_arrow")` Melhora generalizada do indicador durante os períodos
+
+`r emo::ji("right_arrow")` Manutenção da desigualdade regional
+
+`r emo::ji("right_arrow")` 2009: sem dados para o RS
+]
+---
+# Análises Preliminares
+
+.pull-left[
+### IDEB
+
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  group_by(ano, rede, anos_escolares) %>% 
+  summarise(ideb = mean(ideb)) %>% 
+  ggplot(aes(x = factor(ano), y = ideb,
+             colour = anos_escolares,
+             group = anos_escolares)) +
+  geom_point(size = 2.5) + 
+  geom_line(lwd = 1.25) +
+  labs(x = "Ano", y = "IDEB") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".",
+                                               decimal.mark = ",",
+                                               scientific = F)) +
+  scale_colour_manual(labels = c("iniciais (1-5)"   = "Fundamental 1",
+                                   "finais (6-9)"   = "Fundamental 2"),
+                        values = c("#145A32", "darkcyan")) +
+  guides(colour = guide_legend("Etapa", reverse = T)) +
+  theme_classic() 
+```
+]
+
+--
+.pull-right[
+### SAEB
+
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8, cache = TRUE}
+df.educ %>% 
+  group_by(ano, rede, anos_escolares) %>% 
+  summarise(ideb = mean(saeb_ideb)) %>% 
+  ggplot(aes(x = factor(ano), y = ideb, colour = anos_escolares, group = anos_escolares)) +
+  geom_point(size = 2.5) + 
+  geom_line(lwd = 1.25) +
+  labs(x = "Ano", y = "Índice de Aproveitamento (Saeb)") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = F)) +
+    scale_colour_manual(labels = c("iniciais (1-5)"   = "Fundamental 1",
+                                   "finais (6-9)"     = "Fundamental 2"),
+                        values = c("#145A32", "darkcyan")) +
+  theme_classic() + 
+  guides(colour = guide_legend("Etapa", reverse = T))
+```
+]
+
+---
+#Análise Preliminar
+### Ideb por Ano
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  mutate(ano = factor(ano)) %>% 
+  ggplot(aes(x = ideb, fill = ano, colour = ano)) +
+  geom_density(alpha = .1, show.legend = F) + 
+  stat_density(geom="line",position="identity") +
+  labs(x = "IDEB", y = "Densidade") +
+  scale_x_continuous(labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE)) +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE)) +
+  theme_classic() +
+  theme(legend.position = 'top') +
+  guides(colour = guide_legend(""), fill = 'none')
+```
+---
+# Análises Preliminares
+### Resultado Ideb por região
+
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  group_by(ano, regiao, anos_escolares) %>% 
+  summarise(ideb = mean(ideb)) %>% 
+  ggplot(aes(x = factor(ano), y = ideb, 
+             colour = factor(regiao), 
+             group = factor(regiao))) +
+  geom_point(size = 2.5) + 
+  geom_line(lwd = 1.25) +
+  labs(x = "Ano", y = "IDEB") +
+  scale_y_continuous(breaks = seq(3, 6, by = .5),
+                     labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = F)) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_classic() + 
+  guides(colour = guide_legend("Região")) +
+  facet_grid(cols = vars(anos_escolares), switch = 'y',
+             labeller = as_labeller(c('finais (6-9)' = 'Fundamental 2',
+                                      'iniciais (1-5)' = 'Fundamental 1')))
+```
+
+---
+
+#Análise Preliminar
+### Ideb por Ano e Região
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  mutate(ano = factor(ano)) %>% 
+  ggplot(aes(x = regiao, y = ideb, fill = ano)) +
+  geom_boxplot() + 
+  labs(x = "Ano", y = "IDEB") +
+  theme_classic() +
+  theme(legend.position = 'top') +
+  guides(fill = guide_legend(""))
+
+```
+---
+#Análise Preliminar
+### Ideb por Região
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  mutate(ano = factor(ano)) %>% 
+  ggplot(aes(x = ideb, fill = regiao, colour = regiao)) +
+  geom_density(alpha = .1, show.legend = F) + 
+  stat_density(geom="line",position="identity") +
+  labs(x = "IDEB", y = "Densidade") +
+  scale_x_continuous(labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE)) +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE)) +
+  theme_classic() +
+  theme(legend.position = 'top') +
+  guides(colour = guide_legend(""), fill = 'none')
+```
+
+---
+
+# Análises Preliminares
+]
+
+--
+
+.left-column[
+`r emo::ji("right_arrow")` Houve uma queda considerável da participação das despesas em educação em relação ao PIB, em todas as UFs
+
+`r emo::ji("right_arrow")` Contudo, após esse ano houve uma certa estabilização do indicador 
+]
+
+---
+#Análise Preliminar
+### Boxplot: Despesa por educação
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  filter(despesa_educ_perc_pib_mun_def < 1) %>% 
+  mutate(ano = factor(ano)) %>% 
+  ggplot(aes(x = ano, y = 100 * despesa_educ_perc_pib_mun_def, fill = ano)) +
+  geom_boxplot() + 
+  labs(x = "Ano", y = "Despesa com Educação (R$ 2019) / PIB Municipal (R$ 2019) (%)") +
+  scale_color_brewer(palette = "Dark2") +
+  theme_classic() +
+  theme(legend.position = 'none')
+```
+
+---
+class: inverse, middle, center, hide-logo
+
+# Análises Preliminares
+## Infraestrutura
+
+---
+# Análises Preliminares
+
+```{r , results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+df.educ %>% 
+  rename(Ano = ano) %>% 
+  group_by(Ano) %>% 
+  summarise(`Água` = mean(est_agua),
+            `Água RP` = mean(est_agua_rede_publica),
+            `Energia` = mean(est_energia),
+            `Esgoto` = mean(est_esgoto),
+            `Internet` = mean(tec_internet),
+            # `Quadras` = mean(est_quadraesportes),  # tirar? falta de dados!
+            `Lab. Informática` = mean(tec_lab_informatica),
+            `Biblioteca` = mean(est_biblioteca)) %>% 
+  mutate(across(!c(Ano), ~scales::percent(., accuracy = .1, decimal.mark = ","))) %>% 
+  stargazer(
+      title = "Médias de Infraestrutura por Ano",
+      summary = F, rownames = F, header = F,
+      digit.separator = ".", label = "tab:infraestrutura_ano",
+      type = "html"
+    )
+```
+
+---
+# Análises Preliminares
+
+### Água Pública
+
+```{r echo=F, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
+df.educ %>% 
+  group_by(ano, est_agua_rede_publica, anos_escolares) %>% 
+  summarise(ideb = mean(ideb)) %>% 
+  ggplot(aes(x = factor(ano), y = ideb, 
+             colour = factor(est_agua_rede_publica), 
+             group = factor(est_agua_rede_publica))) +
+  geom_point(size = 2.5) + 
+  geom_line(lwd = 1.25) +
+  labs(x = "Ano", y = "IDEB") +
+  scale_y_continuous(breaks = seq(3.5, 5.5, by = .5),
+                     labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = F)) +
+  scale_color_manual(labels = c("Não", "Sim"),
+                     values = c("#145A32", "darkcyan")) +
+  theme_classic() + 
+  guides(colour = guide_legend("Água Pública", reverse = T)) +
+  facet_grid(cols = vars(anos_escolares), switch = 'y',
+             labeller = as_labeller(c('finais (6-9)' = 'Fundamental 2',
+                                      'iniciais (1-5)' = 'Fundamental 1')))
+```
+
+---
+#Análise Preliminar
+### Violin: Água - Rede Pública X IDEB x Ano
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  mutate(ano = factor(ano), est_agua_rede_publica = factor(est_agua_rede_publica)) %>% 
+  ggplot(aes(x = ano, y = ideb, fill = est_agua_rede_publica)) +
+  geom_violin(draw_quantiles = c(0.5)) + 
+  labs(x = "Ano", y = "IDEB") +
+  scale_fill_manual(labels = c("Não", "Sim"),
+                    values = c("#145A32", "darkcyan")) +
+  theme_classic() +
+  theme(legend.position = 'top') +
+  guides(fill = guide_legend("Água - Rede Pública")) +
+  facet_grid(cols = vars(anos_escolares), switch = 'y',
+             labeller = as_labeller(c('finais (6-9)' = 'Fundamental 2',
+                                      'iniciais (1-5)' = 'Fundamental 1')))
+```
+---
+#Análise Preliminar
+### Boxplot: Água - Rede Pública X IDEB x Ano
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  mutate(ano = factor(ano), est_agua_rede_publica = factor(est_agua_rede_publica)) %>% 
+  ggplot(aes(x = ano, y = ideb, fill = est_agua_rede_publica)) +
+  geom_boxplot() + 
+  labs(x = "Ano", y = "IDEB") +
+  theme_classic() +
+  theme(legend.position = 'top') +
+  scale_fill_manual(labels = c("Não", "Sim"),
+                    values = c("#145A32", "darkcyan")) +
+  guides(fill = guide_legend("Água - Rede Pública"))
+```
+---
+#Análise Preliminar
+### Densidade: Água - Rede Pública X IDEB x Ano
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  mutate(ano = factor(ano), est_agua_rede_publica = factor(est_agua_rede_publica)) %>% 
+  ggplot(aes(x = ideb, fill = est_agua_rede_publica, colour = est_agua_rede_publica)) +
+  geom_density(alpha = .3, show.legend = F) + 
+  stat_density(geom="line",position="identity") +
+  labs(x = "IDEB", y = "Densidade") +
+  scale_x_continuous(labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE)) +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE)) +
+  scale_color_manual(labels = c("Não", "Sim"),
+                    values = c("#145A32", "darkcyan")) +
+  scale_fill_manual(labels = c("Não", "Sim"),
+                    values = c("#145A32", "darkcyan")) +
+  theme_classic() +
+  theme(legend.position = 'top') +
+  guides(colour = guide_legend("Água - Rede Pública"), fill = 'none')
+```
+---
+
+# Análises Preliminares
+
+### Energia - Rede Pública
+
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  group_by(ano, est_energia_rede_publica, anos_escolares) %>% 
+  summarise(ideb = mean(ideb)) %>% 
+  ggplot(aes(x = factor(ano), y = ideb, 
+             colour = factor(est_energia_rede_publica), 
+             group = factor(est_energia_rede_publica))) +
+  geom_point(size = 2.5) + 
+  geom_line(lwd = 1.25) +
+  labs(x = "Ano", y = "IDEB") +
+  scale_y_continuous(breaks = seq(3, 5.5, by = .5),
+                     labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = F)) +
+  scale_colour_manual(labels = c("Não", "Sim"),
+                      values = c("#145A32", "darkcyan")) +
+  theme_classic() + 
+  guides(colour = guide_legend("Energia - Rede Pública")) +
+  facet_grid(cols = vars(anos_escolares), switch = 'y',
+             labeller = as_labeller(c('finais (6-9)' = 'Fundamental 2',
+                                      'iniciais (1-5)' = 'Fundamental 1')))
+```
+
+---
+#Análise Preliminar
+### Violin: Energia Pub X IDEB x Ano
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  mutate(ano = factor(ano), est_energia_rede_publica = factor(est_energia_rede_publica)) %>% 
+  ggplot(aes(x = ano, y = ideb, fill = est_energia_rede_publica)) +
+  geom_violin(draw_quantiles = c(0.5)) + 
+  labs(x = "Ano", y = "IDEB") +
+  scale_fill_manual(labels = c("Não", "Sim"),
+                      values = c("#145A32", "darkcyan")) +
+  theme_classic() +
+  theme(legend.position = 'top') +
+  guides(fill = guide_legend("Energia - Rede Pública"))
+```
+---
+#Análise Preliminar
+### Boxplot: Energia - Rede Pública X IDEB x Ano
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  mutate(ano = factor(ano), est_energia_rede_publica = factor(est_energia_rede_publica)) %>% 
+  ggplot(aes(x = ano, y = ideb, fill = est_energia_rede_publica)) +
+  geom_boxplot() + 
+  labs(x = "Ano", y = "IDEB") +
+  scale_fill_manual(labels = c("Não", "Sim"),
+                      values = c("#145A32", "darkcyan")) +
+  theme_classic() +
+  theme(legend.position = 'top') +
+  guides(fill = guide_legend("Energia - Rede Pública"))
+```
+---
+#Análise Preliminar
+### Densidade: Energia - Rede Pública X IDEB x Ano
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  mutate(ano = factor(ano), est_energia_rede_publica = factor(est_energia_rede_publica)) %>% 
+  ggplot(aes(x = ideb, fill = est_energia_rede_publica, colour = est_energia_rede_publica)) +
+  geom_density(alpha = .1, show.legend = F) + 
+  stat_density(geom="line",position="identity") +
+  labs(x = "IDEB", y = "Densidade") +
+  scale_x_continuous(labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE)) +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE)) +
+  scale_fill_manual(labels = c("Não", "Sim"),
+                    values = c("#145A32", "darkcyan")) +
+  theme_classic() +
+  theme(legend.position = 'top') +
+  guides(colour = guide_legend("Energia - Rede Pública"), fill = 'none')
+```
+
+---
+# Análises Preliminares
+### Esgoto
+
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  group_by(ano, est_esgoto, anos_escolares) %>% 
+  summarise(ideb = mean(ideb)) %>%
+  ggplot(aes(x = factor(ano), y = ideb, 
+             colour = factor(est_esgoto), 
+             group = factor(est_esgoto))) +
+  geom_point(size = 2.5) + 
+  geom_line(lwd = 1.25) +
+  labs(x = "Ano", y = "IDEB") +
+  scale_y_continuous(breaks = seq(3, 5.5, by = .5),
+                     labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = F)) +
+  scale_colour_manual(labels = c("Não", "Sim"),
+                      values = c("#145A32", "darkcyan")) +
+  theme_classic() + 
+  guides(colour = guide_legend("Esgoto")) +
+  facet_grid(cols = vars(anos_escolares), switch = 'y',
+             labeller = as_labeller(c('finais (6-9)' = 'Fundamental 2',
+                                      'iniciais (1-5)' = 'Fundamental 1')))
+```
+
+---
+
+# Análises Preliminares
+### Internet
+
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  group_by(ano, tec_internet, anos_escolares) %>% 
+  summarise(ideb = mean(ideb)) %>% 
+  ggplot(aes(x = factor(ano), y = ideb, 
+             colour = factor(tec_internet), 
+             group = factor(tec_internet))) +
+  geom_point(size = 2.5) + 
+  geom_line(lwd = 1.25) +
+  labs(x = "Ano", y = "IDEB") +
+  scale_y_continuous(breaks = seq(3, 5.5, by = .5),
+                     labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = F)) +
+  scale_colour_manual(labels = c("Não", "Sim"),
+                      values = c("#145A32", "darkcyan")) +
+  theme_classic() + 
+  guides(colour = guide_legend("Energia")) +
+  facet_grid(cols = vars(anos_escolares), switch = 'y',
+             labeller = as_labeller(c('finais (6-9)' = 'Fundamental 2',
+                                      'iniciais (1-5)' = 'Fundamental 1')))
+```
+---
+#Análise Preliminar
+### Violin: Internet X IDEB x Ano
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  mutate(ano = factor(ano), tec_internet = factor(tec_internet)) %>% 
+  ggplot(aes(x = ano, y = ideb, fill = tec_internet)) +
+  geom_violin(draw_quantiles = c(0.5)) + 
+  labs(x = "Ano", y = "IDEB") +
+  scale_fill_manual(labels = c("Não", "Sim"),
+                      values = c("#145A32", "darkcyan")) +
+  theme_classic() +
+  theme(legend.position = 'top') +
+  guides(fill = guide_legend("Internet"))
+```
+---
+#Análise Preliminar
+### Boxplot: Internet X IDEB x Ano
+```{r echo=F, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
+df.educ %>% 
+  mutate(ano = factor(ano),
+         tec_internet = factor(tec_internet)) %>% 
+  ggplot(aes(x = ano, y = ideb, fill = tec_internet)) +
+  geom_boxplot() + 
+  labs(x = "Ano", y = "IDEB") +
+  scale_fill_manual(labels = c("Não", "Sim"),
+                    values = c("#145A32", "darkcyan"))+
+  theme_classic() +
+  theme(legend.position = 'top') +
+  guides(fill = guide_legend("Internet"))
+```
+---
+#Análise Preliminar
+### Densidade: Internet X IDEB x Ano
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  mutate(ano = factor(ano), tec_internet = factor(tec_internet)) %>% 
+  ggplot(aes(x = ideb, fill = tec_internet, colour = tec_internet)) +
+  geom_density(alpha = .1, show.legend = F) + 
+  stat_density(geom="line",position="identity") +
+  labs(x = "IDEB", y = "Densidade") +
+  scale_x_continuous(labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE)) +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE)) +
+  scale_colour_manual(labels = c("Não", "Sim"),
+                      values = c("#145A32", "darkcyan")) +
+  scale_fill_manual(labels = c("Não", "Sim"),
+                    values = c("#145A32", "darkcyan")) +
+  theme_classic() +
+  theme(legend.position = 'top') +
+  guides(colour = guide_legend("Internet"), fill = 'none')
+```
+---
+# Análises Preliminares
+### Laboratório de Informática
+
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  group_by(ano, tec_lab_informatica, anos_escolares) %>% 
+  summarise(ideb = mean(ideb)) %>% 
+  ggplot(aes(x = factor(ano), y = ideb, 
+             colour = factor(tec_lab_informatica), 
+             group = factor(tec_lab_informatica))) +
+  geom_point(size = 2.5) + 
+  geom_line(lwd = 1.25) +
+  labs(x = "Ano", y = "IDEB") +
+  scale_y_continuous(breaks = seq(3, 5.5, by = .5),
+                     labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = F)) +
+  scale_colour_manual(labels = c("Não", "Sim"),
+                      values = c("#145A32", "darkcyan")) +
+  theme_classic() + 
+  guides(colour = guide_legend("Laboratório de Informática")) +
+  facet_grid(cols = vars(anos_escolares), switch = 'y',
+             labeller = as_labeller(c('finais (6-9)' = 'Fundamental 2',
+                                      'iniciais (1-5)' = 'Fundamental 1')))
+```
+
+---
+# Análises Preliminares
+### Quadra Esportiva
+
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  group_by(ano, est_quadraesportes, anos_escolares) %>% 
+  summarise(ideb = mean(ideb)) %>% 
+  ggplot(aes(x = factor(ano), y = ideb, 
+             colour = factor(est_quadraesportes), 
+             group = factor(est_quadraesportes))) +
+  geom_point(size = 2.5) + 
+  geom_line(lwd = 1.25) +
+  labs(x = "Ano", y = "IDEB") +
+  scale_y_continuous(breaks = seq(3, 5.5, by = .5),
+                     labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = F)) +
+  scale_colour_manual(labels = c("Não", "Sim"),
+                      values = c("#145A32", "darkcyan")) +
+  theme_classic() + 
+  guides(colour = guide_legend("Quadra Esportiva")) +
+  facet_grid(cols = vars(anos_escolares), switch = 'y',
+             labeller = as_labeller(c('finais (6-9)' = 'Fundamental 2',
+                                      'iniciais (1-5)' = 'Fundamental 1')))
+```
+
+---
+# Análises Preliminares
+### Biblioteca
+
+```{r, echo=F, message=F, warning=F, fig.height=5, fig.width=8}
+df.educ %>% 
+  group_by(ano, est_biblioteca, anos_escolares) %>% 
+  summarise(ideb = mean(ideb)) %>% 
+  ggplot(aes(x = factor(ano), y = ideb, 
+             colour = factor(est_biblioteca), 
+             group = factor(est_biblioteca))) +
+  geom_point(size = 2.5) + 
+  geom_line(lwd = 1.25) +
+  labs(x = "Ano", y = "IDEB") +
+  scale_y_continuous(breaks = seq(3, 5.5, by = .5),
+                     labels=function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = F)) +
+  scale_colour_manual(labels = c("Não", "Sim"),
+                      values = c("#145A32", "darkcyan")) +
+  theme_classic() + 
+  guides(colour = guide_legend("Biblioteca")) +
+  facet_grid(cols = vars(anos_escolares), switch = 'y',
+             labeller = as_labeller(c('finais (6-9)' = 'Fundamental 2',
+                                      'iniciais (1-5)' = 'Fundamental 1'))) 
+```
+---
+class: inverse, middle, center, hide-logo
+
+# FIM

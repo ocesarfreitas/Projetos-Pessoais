@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Apresentação laboratório de Econometria</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Cesar Freitas, Gabriel Lucas, João Pedro Dias, Júlia Michalski, Vinícius Nery" />
+    <script src="libs/header-attrs-2.12/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Apresentação laboratório de Econometria
+### Cesar Freitas, Gabriel Lucas, João Pedro Dias, Júlia Michalski, Vinícius Nery
+### Universidade de Brasília (UnB)
+### 15/03/2022
+
+---
+
+
+
+
+
+
+
+
+class: inverse, middle, center, hide-logo
+
+# Contexto
+
+---
+
+# Contexto
+&lt;!--
+Estou um pouco na dúvida se essa parte é realmente relevante para apresentação
+--&gt;
+
+.right-column[
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-1-1.png" alt="Escolaridade Média de Diversos Países entre 1900 e 2010"  /&gt;
+&lt;p class="caption"&gt;Escolaridade Média de Diversos Países entre 1900 e 2010&lt;/p&gt;
+&lt;/div&gt;
+]
+
+--
+
+.left-column[
+➡️ Até 1970: acesso educação básica no Brasil era um privilégio
+
+➡️ A partir de 1970: ganho de produtividade e redução da desigualdade de renda
+
+➡️ Século XXI: desafio de aliar esse ganho a melhoras quali na educação
+]
+
+
+---
+
+class: inverse, middle, center, hide-logo
+
+# O IDEB
+
+---
+# O Ideb
+
+➡️ Criado em 2007 para estimar a situação educacional, realizado bianualmente
+
+➡️ Parte das metas do Plano de Desenvolvimento
+
+--
+
+.pull-left[
+### Construção do indicador
+`\begin{equation}
+  IDEB_{ij} = R_{ij} \cdot A_{ij}
+\end{equation}`
+
+➡️ `\(i\)` = ano do exame (Saeb e Prova Brasil) e do Censo Escolar
+
+➡️ `\(j\)` = unidade de ensino
+
+➡️ `\(R_{ij}\)` = Indicador de rendimento
+  
+➡️ `\(A_{ij}\)` = Média do desempenho de matemática e português
+
+]
+
+--
+
+.pull-right[
+### Questões sobre o ideb
+➡️ Combina 'fluxo' e 'aprendizagem' para equilibrar a avaliação do indicador
+
+➡️ Passível de ser burlado pelas instituições de ensino
+
+➡️ A prova desconsidera questões qualitativas, socioeconômicas e conjunturais que podem vir a afetar o desempenho dos estudantes
+]
+
+---
+
+class: inverse, middle, center, hide-logo
+
+# Dados
+
+---
+# Bases de dados
+➡️ Todas as base foram extraídas do *datalake* da Base dos Dados, usando o *Google Big Query*
+
+--
+
+.pull-left[
+### IDEB
+➡️ Disponibilizados pelo Inep, com recorte a nível escolar e municipal
+
+➡️ Excluiu-se as que escolas municipais brasileiras sem Ideb registrado
+
+➡️ Foco no Ensino Fundamental
+]
+
+--
+
+.pull-right[
+### Censo Escolar
+➡️ Disponibilizados pelo Inep
+
+➡️ Utilizou-se as variáveis referentes a infraestrutura, tecnologia, número de matrículas e quantidade professores, obtidas a nível de colégio
+
+]
+---
+# Bases de dados
+
+.pull-left[
+### Indicadores Educacionais
+➡️ Disponibilizados pelo Inep, para cada uma das etapas de ensino (Fundamental I e II) em cada escola
+
+➡️ Média de alunos por turma, a quantidade de horas-aula 
+
+➡️ Percentual de professores com ensino superior
+]
+
+--
+
+.pull-right[
+### SICONFI
+➡️ Sistema de Informações Contábeis e Fiscais do Setor Público Brasileiro
+
+➡️ *Proxy* para o valor gasto por cada escola
+usada pelo Tesouro Nacional, dada pela expressão:
+`\begin{equation}
+  desp^{esc}_{educ} = \frac{alunos^{esc}}{alunos^{mun}}\cdot desp^{mun}_{educ}
+\end{equation}`
+]
+---
+# Bases de dados
+.pull-left[
+### IBGE
+➡️ Obter dados sobre PIB e população municipal
+
+### RAIS
+➡️ Obter o número de trabalhadores formais e o salário médio de cada município
+
+➡️ Coletou-se também esses dados discriminados
+para os professores para as etapa educionais utilizadas
+]
+
+--
+
+.pull-right[
+### Fundeb
+
+➡️ O Fundeb por município, faz parte das informações sobre transferências obrigatórias da união para municípios divulgadas pelo Tesouro Nacional
+
+➡️ Não foi retirado da *Base dos Dados*
+
+]
+
+---
+# Bases de dados
+### Considerações
+➡️ Observou-se a presença de valores extremos em relação as despesas municipais
+
+➡️ Foi considerado como *outliers* as observações que se encontravam no topo 0,1% da distribuição, de modo que:
+
+--
+
+&lt;table style="text-align:center"&gt;&lt;caption&gt;&lt;strong&gt;Resultado da base&lt;/strong&gt;&lt;/caption&gt;
+ &lt;tr&gt;&lt;td colspan="4" style="border-bottom: 1px solid black"&gt;&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; Situação &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; Observações &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; Variáveis &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Sem tratar outliers &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 271.621 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 96 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Após tratar outliers &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 270.348 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 96 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;tr&gt;&lt;td colspan="4" style="border-bottom: 1px solid black"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+---
+
+class: inverse, middle, center, hide-logo
+
+# Análises Preliminares
+
+--
+## Conjuntura
+
+---
+# Análises Preliminares
+### 
+
+
+
+&lt;table style="text-align:center"&gt;&lt;caption&gt;&lt;strong&gt;Distribuição das Observações por Ano e Etapa Escolar&lt;/strong&gt;&lt;/caption&gt;
+&lt;tr&gt;&lt;td colspan="4" style="border-bottom: 1px solid black"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style="text-align:left"&gt;Ano&lt;/td&gt;&lt;td&gt;Fundamental I&lt;/td&gt;&lt;td&gt;Fundamental II&lt;/td&gt;&lt;td&gt;Total&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td colspan="4" style="border-bottom: 1px solid black"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style="text-align:left"&gt;2009&lt;/td&gt;&lt;td&gt;29478&lt;/td&gt;&lt;td&gt;12452&lt;/td&gt;&lt;td&gt;41930&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="text-align:left"&gt;2011&lt;/td&gt;&lt;td&gt;29040&lt;/td&gt;&lt;td&gt;13222&lt;/td&gt;&lt;td&gt;42262&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="text-align:left"&gt;2013&lt;/td&gt;&lt;td&gt;29302&lt;/td&gt;&lt;td&gt;13932&lt;/td&gt;&lt;td&gt;43234&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="text-align:left"&gt;2015&lt;/td&gt;&lt;td&gt;29864&lt;/td&gt;&lt;td&gt;13905&lt;/td&gt;&lt;td&gt;43769&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="text-align:left"&gt;2017&lt;/td&gt;&lt;td&gt;33866&lt;/td&gt;&lt;td&gt;14279&lt;/td&gt;&lt;td&gt;48145&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="text-align:left"&gt;2019&lt;/td&gt;&lt;td&gt;34814&lt;/td&gt;&lt;td&gt;16194&lt;/td&gt;&lt;td&gt;51008&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="text-align:left"&gt;Total&lt;/td&gt;&lt;td&gt;186364&lt;/td&gt;&lt;td&gt;83984&lt;/td&gt;&lt;td&gt;270348&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td colspan="4" style="border-bottom: 1px solid black"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+
+---
+
+# Análises Preliminares
+
+
+### Resultado do Ideb por UF
+
+
+
+.right-column[
+&lt;img src="Apresentacao_files/figure-html/Mapa ideb-1.png" style="display: block; margin: auto;" /&gt;
+]
+
+--
+
+.left-column[
+➡️ Melhora generalizada do indicador durante os períodos
+
+➡️ Manutenção da desigualdade regional
+
+➡️ 2009: sem dados para o RS
+]
+---
+# Análises Preliminares
+
+.pull-left[
+### IDEB
+
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-2-1.png" style="display: block; margin: auto;" /&gt;
+]
+
+--
+.pull-right[
+### SAEB
+
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-3-1.png" style="display: block; margin: auto;" /&gt;
+]
+
+---
+#Análise Preliminar
+### Ideb por Ano
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-4-1.png" style="display: block; margin: auto;" /&gt;
+---
+# Análises Preliminares
+### Resultado Ideb por região
+
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-5-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+#Análise Preliminar
+### Ideb por Ano e Região
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-6-1.png" style="display: block; margin: auto;" /&gt;
+---
+#Análise Preliminar
+### Ideb por Região
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-7-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Análises Preliminares
+### Despesa em educação em relação ao PIB
+
+.right-column[
+
+
+&lt;img src="Apresentacao_files/figure-html/Mapa proxy-1.png" style="display: block; margin: auto;" /&gt;
+]
+
+--
+
+.left-column[
+➡️ Houve uma queda considerável da participação das despesas em educação em relação ao PIB, em todas as UFs
+
+➡️ Contudo, após esse ano houve uma certa estabilização do indicador 
+]
+
+---
+#Análise Preliminar
+### Boxplot: Despesa por educação
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-8-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+class: inverse, middle, center, hide-logo
+
+# Análises Preliminares
+## Infraestrutura
+
+---
+# Análises Preliminares
+
+
+&lt;table style="text-align:center"&gt;&lt;caption&gt;&lt;strong&gt;Médias de Infraestrutura por Ano&lt;/strong&gt;&lt;/caption&gt;
+&lt;tr&gt;&lt;td colspan="8" style="border-bottom: 1px solid black"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style="text-align:left"&gt;Ano&lt;/td&gt;&lt;td&gt;Água&lt;/td&gt;&lt;td&gt;Água RP&lt;/td&gt;&lt;td&gt;Energia&lt;/td&gt;&lt;td&gt;Esgoto&lt;/td&gt;&lt;td&gt;Internet&lt;/td&gt;&lt;td&gt;Lab. Informática&lt;/td&gt;&lt;td&gt;Biblioteca&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td colspan="8" style="border-bottom: 1px solid black"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style="text-align:left"&gt;2009&lt;/td&gt;&lt;td&gt;99,9%&lt;/td&gt;&lt;td&gt;80,3%&lt;/td&gt;&lt;td&gt;99,6%&lt;/td&gt;&lt;td&gt;99,4%&lt;/td&gt;&lt;td&gt;55,1%&lt;/td&gt;&lt;td&gt;46,6%&lt;/td&gt;&lt;td&gt;46,9%&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="text-align:left"&gt;2011&lt;/td&gt;&lt;td&gt;98,7%&lt;/td&gt;&lt;td&gt;82,4%&lt;/td&gt;&lt;td&gt;99,8%&lt;/td&gt;&lt;td&gt;99,4%&lt;/td&gt;&lt;td&gt;74,0%&lt;/td&gt;&lt;td&gt;72,5%&lt;/td&gt;&lt;td&gt;49,6%&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="text-align:left"&gt;2013&lt;/td&gt;&lt;td&gt;98,1%&lt;/td&gt;&lt;td&gt;82,4%&lt;/td&gt;&lt;td&gt;99,8%&lt;/td&gt;&lt;td&gt;99,2%&lt;/td&gt;&lt;td&gt;78,7%&lt;/td&gt;&lt;td&gt;78,5%&lt;/td&gt;&lt;td&gt;50,3%&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="text-align:left"&gt;2015&lt;/td&gt;&lt;td&gt;98,3%&lt;/td&gt;&lt;td&gt;83,0%&lt;/td&gt;&lt;td&gt;99,9%&lt;/td&gt;&lt;td&gt;99,2%&lt;/td&gt;&lt;td&gt;83,8%&lt;/td&gt;&lt;td&gt;75,5%&lt;/td&gt;&lt;td&gt;51,8%&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="text-align:left"&gt;2017&lt;/td&gt;&lt;td&gt;98,3%&lt;/td&gt;&lt;td&gt;77,0%&lt;/td&gt;&lt;td&gt;99,9%&lt;/td&gt;&lt;td&gt;98,9%&lt;/td&gt;&lt;td&gt;80,5%&lt;/td&gt;&lt;td&gt;61,2%&lt;/td&gt;&lt;td&gt;46,3%&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="text-align:left"&gt;2019&lt;/td&gt;&lt;td&gt;98,8%&lt;/td&gt;&lt;td&gt;77,8%&lt;/td&gt;&lt;td&gt;99,7%&lt;/td&gt;&lt;td&gt;97,5%&lt;/td&gt;&lt;td&gt;87,5%&lt;/td&gt;&lt;td&gt;48,1%&lt;/td&gt;&lt;td&gt;42,6%&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td colspan="8" style="border-bottom: 1px solid black"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+
+---
+# Análises Preliminares
+
+### Água Pública
+
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-10-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+#Análise Preliminar
+### Violin: Água - Rede Pública X IDEB x Ano
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-11-1.png" style="display: block; margin: auto;" /&gt;
+---
+#Análise Preliminar
+### Boxplot: Água - Rede Pública X IDEB x Ano
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-12-1.png" style="display: block; margin: auto;" /&gt;
+---
+#Análise Preliminar
+### Densidade: Água - Rede Pública X IDEB x Ano
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-13-1.png" style="display: block; margin: auto;" /&gt;
+---
+
+# Análises Preliminares
+
+### Energia - Rede Pública
+
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-14-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+#Análise Preliminar
+### Violin: Energia Pub X IDEB x Ano
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-15-1.png" style="display: block; margin: auto;" /&gt;
+---
+#Análise Preliminar
+### Boxplot: Energia - Rede Pública X IDEB x Ano
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-16-1.png" style="display: block; margin: auto;" /&gt;
+---
+#Análise Preliminar
+### Densidade: Energia - Rede Pública X IDEB x Ano
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-17-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+# Análises Preliminares
+### Esgoto
+
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-18-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Análises Preliminares
+### Internet
+
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-19-1.png" style="display: block; margin: auto;" /&gt;
+---
+#Análise Preliminar
+### Violin: Internet X IDEB x Ano
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-20-1.png" style="display: block; margin: auto;" /&gt;
+---
+#Análise Preliminar
+### Boxplot: Internet X IDEB x Ano
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-21-1.png" style="display: block; margin: auto;" /&gt;
+---
+#Análise Preliminar
+### Densidade: Internet X IDEB x Ano
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-22-1.png" style="display: block; margin: auto;" /&gt;
+---
+# Análises Preliminares
+### Laboratório de Informática
+
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-23-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+# Análises Preliminares
+### Quadra Esportiva
+
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-24-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+# Análises Preliminares
+### Biblioteca
+
+&lt;img src="Apresentacao_files/figure-html/unnamed-chunk-25-1.png" style="display: block; margin: auto;" /&gt;
+---
+class: inverse, middle, center, hide-logo
+
+# FIM
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+<style>
+.logo {
+  background-image: url(logo_unb.png);
+  background-size: contain;
+  background-repeat: no-repeat;
+  position: absolute;
+  top: 1em;
+  right: 1em;
+  width: 110px;
+  height: 128px;
+  z-index: 0;
+}
+</style>
+
+<script>
+document
+  .querySelectorAll(
+    '.remark-slide-content' +
+    ':not(.title-slide)' +
+    // add additional classes to exclude here, e.g.
+    // ':not(.inverse)' +
+    ':not(.hide-logo)'
+  )
+  .forEach(el => {
+    el.innerHTML += '<div class="logo"></div>';
+  });
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
