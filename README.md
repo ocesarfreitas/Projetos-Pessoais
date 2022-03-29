@@ -1,4 +1,3 @@
-# Laboratório Econometria
 A matéria de Laboratório Econometria tem como objetivo aprofundar os conhecimentos dos alunos de graduação em economia da Universidade de Brasília (UnB) no conteúdo de 
 econometria. Sendo os principais conteúdo abordados:
 
